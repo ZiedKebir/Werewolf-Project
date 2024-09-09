@@ -1,27 +1,23 @@
 import pymongo
 import os
-
-os.chdir("C:/Users/ziedk/OneDrive/Bureau/Data Science Projects/Werewolf-Project")
-
-# open connection at port 27017
-client = pymongo.MongoClient('localhost', 27017)
-# create db tutorial
-mydb = client["Werewolf"]
-# create collection example
-collection = mydb["Images"]
-
-
-# Open the folder containing the card images
 from PIL import Image
-import requests
-
-im = Image.open("Images/Chasseur.jpg")
-
-
-
+import numpy as np
 import albumentations as A
 import cv2
 import matplotlib.pyplot as plt
+from pymongo import MongoClient
+import gridfs
+from PIL import Image
+import io
+
+os.chdir("C:/Users/ziedk/OneDrive/Bureau/Data Science Projects/Werewolf-Project")
+
+# Connect to MongoDB
+client = MongoClient('mongodb://localhost:27017/')
+db = client['image_database']
+fs = gridfs.GridFS(db)
+
+
 
 def visualize(image):
     plt.figure(figsize=(10, 10))
@@ -122,6 +118,7 @@ def store_image_and_augment(Image_Name:str):
     return None
 
 
+
 def store_all_images_and_modif():
     for Image_Name in os.listdir("Images"):
         print(Image_Name)
@@ -129,134 +126,15 @@ def store_all_images_and_modif():
 
 
 
-store_all_images_and_modif()
-
-        
-        
-        
-
-        
-        
-augmented_image = data_augmentation("Chasseur.jpg")
-
-with open('Images/Chasseur.jpg', 'rb') as f:
-    contents = f.read()
-
-
-import io
-type(contents)
-
-Pil_image = Image.fromarray(augmented_image)
-
-Pil_image.save(byte_io, format='JPEG')
-
-# Create a BytesIO buffer to store the image in bytes
-byte_io = io.BytesIO()
-img_bytes = byte_io.getvalue()
-
-
-
-# Assuming img_array is your NumPy array (image data)
-# Convert the NumPy array back to an image
-img = Image.fromarray(augmented_image)
-
-# Create a BytesIO buffer to store the image in bytes
-byte_io = io.BytesIO()
-
-# Save the image to the buffer in a specific format (e.g., JPEG, PNG)
-img.save(byte_io, format='JPEG')
-
-# Get the byte data
-img_bytes = byte_io.getvalue()
-
-# Now img_bytes contains the image data in bytes
-print(type(img_bytes))  # Should print <class 'bytes'>
-
-
-
-
-fs.put(Pil_image, filename="PIL")
-
-
-
-for i in os.listdir("Images"):
-    store_images(i)
-
-
-
-
-from pymongo import MongoClient
-import gridfs
-from PIL import Image
-
-# Connect to MongoDB
-client = MongoClient('mongodb://localhost:27017/')
-db = client['image_database']
-fs = gridfs.GridFS(db)
-
-def store_image(image_path):
-    with open(image_path, 'rb') as f:
-        data = f.read()
-        file_id = fs.put(data, filename=image_path)
-        print(f"Image stored with ID: {file_id}")
-
-# Store an image
-store_image('Images/Chasseur.jpg')
-
-
-def retrieve_image(file_id, output_path):
-    out_file = fs.get(file_id).read()
-    with open(output_path, 'wb') as f:
-        f.write(out_file)
-    print(f"Image retrieved and saved to: {output_path}")
-
-# Retrieve and save an image
-file_id = '66defa1d6660bc52e9672171'  # Replace with the actual file ID
-retrieve_image(file_id, 'Test.jpg')
-
-
-
+#Get All the files stored in MongoDb
 for grid_out in fs.find():
     print(f"Filename: {grid_out.filename}, File ID: {grid_out._id}")
     
     
-    
-file_id = '66def65a6660bc52e9672169'  # Replace with the actual ID you got from the print statement above
-try:
-    out_file = fs.get(file_id).read()
-    with open('retrieved_image.jpg', 'wb') as f:
-        f.write(out_file)
-    print("Image retrieved successfully")
-except gridfs.errors.NoFile:
-    print("File not found!")    
-    
+def byte_to_image(mongodb_file_name:str):
+    file = fs.find_one({'filename': 'mongodb_file_name'})
+    image = file.read()
+    Pil_Image = Image.open(io.BytesIO(image))
+    return Pil_Image
 
 
-
-
-
-file = fs.find_one({'filename': 'file'})
-image = file.read()
-
-print(image)
-
-
-
-from PIL import Image
-import numpy as np
-
-# Open the image file
-with open('Images/Chasseur.jpg', 'rb') as f:
-    img = Image.open(f)
-    img.load()  # Ensure the image is loaded before closing the file
-
-# Convert the image to a NumPy array
-img_array = np.array(img)
-
-print(img_array)
-
-
-
-img = Image.fromarray(img_array)
-
-img
