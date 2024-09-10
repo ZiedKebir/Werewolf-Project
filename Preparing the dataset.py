@@ -131,22 +131,111 @@ for grid_out in fs.find():
     print(f"Filename: {grid_out.filename}, File ID: {grid_out._id}")
     
     
+
+    
+    
 def byte_to_image(mongodb_file_name:str):
-    file = fs.find_one({'filename': 'mongodb_file_name'})
+    file = fs.find_one({'filename': mongodb_file_name})
     image = file.read()
     Pil_Image = Image.open(io.BytesIO(image))
     return Pil_Image
 
 
-## Get More Images 
+file = fs.find_one({'Role': 'mongodb_file_name'})
 
-import numpy as np
-import os
-import PIL
-import PIL.Image
+## Get More Images 
+#Using scikit-learn
+from sklearn.datasets import load_digits
+digits = load_digits()
+images = digits.images
+labels = digits.target
+
+image_2D = images[0]
+
+image_3D = np.expand_dims(image_2D, axis=-1)
+
+image_3D
+
+#Using Tensorflow
 import tensorflow as tf
-import tensorflow_datasets as tfds
-import pathlib
-dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
-archive = tf.keras.utils.get_file(origin=dataset_url, extract=True)
-data_dir = pathlib.Path(archive).with_suffix('')
+(train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
+
+
+#Select 2000 Images randomly 
+
+
+train_images[0].shape
+
+
+array([[[ 0.],
+        [ 0.],
+        [ 5.],
+        [13.],
+        [ 9.],
+        [ 1.],
+        [ 0.],
+        [ 0.]],
+
+       [[ 0.],
+        [ 0.],
+        [13.],
+        [15.],
+        [10.],
+        [15.],
+        [ 5.],
+        [ 0.]],
+
+       [[ 0.],
+        [ 3.],
+        [15.],
+        [ 2.],
+        [ 0.],
+        [11.],
+        [ 8.],
+        [ 0.]],
+
+       [[ 0.],
+        [ 4.],
+        [12.],
+        [ 0.],
+        [ 0.],
+        [ 8.],
+        [ 8.],
+        [ 0.]],
+
+       [[ 0.],
+        [ 5.],
+        [ 8.],
+        [ 0.],
+        [ 0.],
+        [ 9.],
+        [ 8.],
+        [ 0.]],
+
+       [[ 0.],
+        [ 4.],
+        [11.],
+        [ 0.],
+        [ 1.],
+        [12.],
+        [ 7.],
+        [ 0.]],
+
+       [[ 0.],
+        [ 2.],
+        [14.],
+        [ 5.],
+        [10.],
+        [12.],
+        [ 0.],
+        [ 0.]],
+
+       [[ 0.],
+        [ 0.],
+        [ 6.],
+        [13.],
+        [10.],
+        [ 0.],
+        [ 0.],
+        [ 0.]]])
+
