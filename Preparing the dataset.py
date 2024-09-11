@@ -141,7 +141,11 @@ def byte_to_image(mongodb_file_name:str):
     return Pil_Image
 
 
-file = fs.find_one({'Role': 'mongodb_file_name'})
+file = fs.find_one({'Role':'Ange' })
+image = file.read()
+image
+Pil_Image = Image.open(io.BytesIO(image))
+np.asarray(Pil_Image).shape
 
 ## Get More Images 
 #Using scikit-learn
@@ -167,75 +171,16 @@ import tensorflow as tf
 train_images[0].shape
 
 
-array([[[ 0.],
-        [ 0.],
-        [ 5.],
-        [13.],
-        [ 9.],
-        [ 1.],
-        [ 0.],
-        [ 0.]],
 
-       [[ 0.],
-        [ 0.],
-        [13.],
-        [15.],
-        [10.],
-        [15.],
-        [ 5.],
-        [ 0.]],
+import tensorflow_datasets as tfds
+import tensorflow as tf
 
-       [[ 0.],
-        [ 3.],
-        [15.],
-        [ 2.],
-        [ 0.],
-        [11.],
-        [ 8.],
-        [ 0.]],
+# Load dataset
+dataset, info = tfds.load('cifar10', with_info=True, as_supervised=True)
 
-       [[ 0.],
-        [ 4.],
-        [12.],
-        [ 0.],
-        [ 0.],
-        [ 8.],
-        [ 8.],
-        [ 0.]],
+# Resize images to 370x370
+def preprocess_image(image, label):
+    image = tf.image.resize(image, [370, 370])
+    return image, label
 
-       [[ 0.],
-        [ 5.],
-        [ 8.],
-        [ 0.],
-        [ 0.],
-        [ 9.],
-        [ 8.],
-        [ 0.]],
-
-       [[ 0.],
-        [ 4.],
-        [11.],
-        [ 0.],
-        [ 1.],
-        [12.],
-        [ 7.],
-        [ 0.]],
-
-       [[ 0.],
-        [ 2.],
-        [14.],
-        [ 5.],
-        [10.],
-        [12.],
-        [ 0.],
-        [ 0.]],
-
-       [[ 0.],
-        [ 0.],
-        [ 6.],
-        [13.],
-        [10.],
-        [ 0.],
-        [ 0.],
-        [ 0.]]])
-
+dataset = dataset['train'].map(preprocess_image)
