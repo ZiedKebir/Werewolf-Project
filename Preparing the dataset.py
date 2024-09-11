@@ -17,6 +17,38 @@ client = MongoClient('mongodb://localhost:27017/')
 db = client['Werewolf']
 fs = gridfs.GridFS(db)
 
+def PIL_to_array(Pil_image):
+    """
+    Parameters
+    ----------
+    Pil_image : PIL.Image.Image
+        An Image
+    Returns
+    -------
+        An Image with the type np.ndarray
+    """
+    return np.array(Pil_image)
+
+
+def resize_image(image_array:np.ndarray):
+    """
+    Parameters
+    ----------
+    image_array : np.ndarray
+        DESCRIPTION.
+    Takes an image as an array and resizes it
+
+    Returns
+    -------
+    nd.ndarray with shape: (225,225,3)
+    """
+
+    #Convert the ndarray to am image
+    img = Image.fromarray(image_array)
+    #resize the image
+    resized_img = img.resize((225,225))
+    #Returns a PIL.Image.Image Type*
+    return np.array(resized_img)
 
 
 def visualize(image):
@@ -27,15 +59,23 @@ def visualize(image):
 
 def data_augmentation(image_name:str):
     """
-    Takes an image and modifies it randomly
+    Parameters
+    ----------
+    image_name : str
+        Contains the name of the image as stored in the source folder. 
+        The name should also include the extension .jpg
     Returns
     -------
-    An Image
+    augmented_image : np.ndarray
+        Applies changes like rotaions, bluring... to the image in order to augment the size of 
+        our dataset
 
-    """
-    
-    image = cv2.imread('Images/'+image_name)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    """    
+    image = Image.open('Images/'+image_name)
+    #Convert the array to a Pil image type
+    image = PIL_to_array(image)
+    #Resize the image before transforming it
+    image = resize_image(image)
 
     transform = A.Compose(
         [A.CLAHE(),
@@ -52,6 +92,42 @@ def data_augmentation(image_name:str):
     #visualize(augmented_image)
     return augmented_image
 
+"""
+image = data_augmentation('Chasseur.jpg')
+visualize(image)
+image.shape
+
+
+
+cv2img = cv2.imread('Images/'+'Sorciere.jpg')
+
+
+visualize(cv2img)
+
+
+type(cv2img)
+
+image = Image.open('Images/'+'Sorciere.jpg')
+visualize(image)
+
+np.array(image)
+
+type(image)
+
+type(np.array(image))
+
+image
+
+
+from PIL import Image 
+ 
+
+cv2img = cv2.imread('Images/'+'Test.jpg')
+
+
+resize_image(cv2img)
+
+"""
 
 """
 
@@ -121,7 +197,6 @@ def store_image_and_augment(Image_Name:str):
 
 def store_all_images_and_modif():
     for Image_Name in os.listdir("Images"):
-        print(Image_Name)
         store_image_and_augment(Image_Name)
 
 store_all_images_and_modif()
@@ -161,14 +236,38 @@ image_3D = np.expand_dims(image_2D, axis=-1)
 image_3D
 
 #Using Tensorflow
+import keras
 import tensorflow as tf
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
+assert train_images.shape == (370,370, 370, 3)
+
+(x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+assert x_train.shape == (50000, 32, 32, 3)
+assert x_test.shape == (10000, 32, 32, 3)
+assert y_train.shape == (50000, 1)
+assert y_test.shape == (10000, 1)
+
+
+x_train_resized = tf.image.resize(x_train[0], (370, 370))
+x_test_resized = tf.image.resize(x_test, (370, 370))
+
+
+
+t = tf.image.resize(image, (370, 370))
+
+visualize(t)
 
 
 #Select 2000 Images randomly 
 
+img = Image.fromarray(train_images[0])
 
-train_images[0].shape
+res_img = tf.image.resize(img, (225, 225))
+
+
+visualize(res_img)
+
+img_2 = Image.fromarray(res_img)
 
 
 
@@ -183,4 +282,10 @@ def preprocess_image(image, label):
     image = tf.image.resize(image, [370, 370])
     return image, label
 
-dataset = dataset['train'].map(preprocess_image)
+dataset = train_images.map(preprocess_image)
+
+a,b= preprocess_image(train_images[0],'Cast')
+a
+
+visualize(train_images[0])
+
