@@ -92,77 +92,6 @@ def data_augmentation(image_name:str):
     #visualize(augmented_image)
     return augmented_image
 
-"""
-image = data_augmentation('Chasseur.jpg')
-visualize(image)
-image.shape
-
-
-
-cv2img = cv2.imread('Images/'+'Sorciere.jpg')
-
-
-visualize(cv2img)
-
-
-type(cv2img)
-
-image = Image.open('Images/'+'Sorciere.jpg')
-visualize(image)
-
-np.array(image)
-
-type(image)
-
-type(np.array(image))
-
-image
-
-
-from PIL import Image 
- 
-
-cv2img = cv2.imread('Images/'+'Test.jpg')
-
-
-resize_image(cv2img)
-
-"""
-
-"""
-
-import numpy as np
-
-with open('Images/Chasseur.jpg', 'rb') as f:
-    contents = f.read()
-img_array = np.array(contents)
-
-print(img_array)
-image = cv2.imread('Images/'+image_name)
-image = cv2.cvtColor(contents, cv2.COLOR_BGR2RGB)
-
-image
-
-#Open the image in read-only format.
-with open('Images/Chasseur.jpg', 'rb') as f:
-    contents = f.read()
-
-
-
-import matplotlib.image as img
-image = img.imread('Images/Chasseur.jpg')
-
-fs.put(image, filename='To Delete')
-
-
-
-len(image)
-
-contents
-
-os.listdir("Images")
-
-"""
 
 def store_image_and_augment(Image_Name:str):
     Role_Name = Image_Name.split('.')[0]
@@ -207,8 +136,6 @@ for grid_out in fs.find():
     
     
 
-    
-    
 def byte_to_image(mongodb_file_name:str):
     file = fs.find_one({'filename': mongodb_file_name})
     image = file.read()
@@ -229,63 +156,27 @@ digits = load_digits()
 images = digits.images
 labels = digits.target
 
-image_2D = images[0]
-
-image_3D = np.expand_dims(image_2D, axis=-1)
-
-image_3D
 
 #Using Tensorflow
 import keras
 import tensorflow as tf
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
-assert train_images.shape == (370,370, 370, 3)
 
-(x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
-assert x_train.shape == (50000, 32, 32, 3)
-assert x_test.shape == (10000, 32, 32, 3)
-assert y_train.shape == (50000, 1)
-assert y_test.shape == (10000, 1)
+def store_non_card_images(img:np.array,img_label:str):
+        img = resize_image(img)
+        img = Image.fromarray(img)
 
+        # Create a BytesIO buffer to store the image in bytes
+        byte_io = io.BytesIO()
 
-x_train_resized = tf.image.resize(x_train[0], (370, 370))
-x_test_resized = tf.image.resize(x_test, (370, 370))
+        # Save the image to the buffer in a specific format (e.g., JPEG, PNG)
+        img.save(byte_io, format='JPEG')
 
+        # Get the byte data
+        img_bytes = byte_io.getvalue()
 
-
-t = tf.image.resize(image, (370, 370))
-
-visualize(t)
-
-
-#Select 2000 Images randomly 
-
-img = Image.fromarray(train_images[0])
-
-res_img = tf.image.resize(img, (225, 225))
+        fs.put(img_bytes, filename=img_label,Role='Other')
+        return None
 
 
-visualize(res_img)
-
-img_2 = Image.fromarray(res_img)
-
-
-
-import tensorflow_datasets as tfds
-import tensorflow as tf
-
-# Load dataset
-dataset, info = tfds.load('cifar10', with_info=True, as_supervised=True)
-
-# Resize images to 370x370
-def preprocess_image(image, label):
-    image = tf.image.resize(image, [370, 370])
-    return image, label
-
-dataset = train_images.map(preprocess_image)
-
-a,b= preprocess_image(train_images[0],'Cast')
-a
-
-visualize(train_images[0])
-
+store_non_card_images(train_images[0], 'Frog')
