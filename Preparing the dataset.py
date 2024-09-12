@@ -9,6 +9,7 @@ from pymongo import MongoClient
 import gridfs
 from PIL import Image
 import io
+import random
 
 os.chdir("C:/Users/ziedk/OneDrive/Bureau/Data Science Projects/Werewolf-Project")
 
@@ -16,6 +17,16 @@ os.chdir("C:/Users/ziedk/OneDrive/Bureau/Data Science Projects/Werewolf-Project"
 client = MongoClient('mongodb://localhost:27017/')
 db = client['Werewolf']
 fs = gridfs.GridFS(db)
+
+#Delete Files
+result = db.fs.files.delete_many({"Role": "Test"})  # Replace 'collection_name' with your actual collection name
+print(f"Deleted {result.deleted_count} documents.")
+
+myquery = {'Role':'Chasseur'}
+
+count = 0
+for i in db.fs.files.find():
+    count +=1 
 
 def PIL_to_array(Pil_image):
     """
@@ -126,6 +137,7 @@ def store_image_and_augment(Image_Name:str):
 
 def store_all_images_and_modif():
     for Image_Name in os.listdir("Images"):
+        print(Image_Name)
         store_image_and_augment(Image_Name)
 
 store_all_images_and_modif()
@@ -142,13 +154,13 @@ def byte_to_image(mongodb_file_name:str):
     Pil_Image = Image.open(io.BytesIO(image))
     return Pil_Image
 
-
+"""
 file = fs.find_one({'Role':'Ange' })
 image = file.read()
 image
 Pil_Image = Image.open(io.BytesIO(image))
 np.asarray(Pil_Image).shape
-
+"""
 ## Get More Images 
 #Using scikit-learn
 from sklearn.datasets import load_digits
@@ -162,7 +174,7 @@ import keras
 import tensorflow as tf
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
 
-def store_non_card_images(img:np.array,img_label:str):
+def store_non_card_single_image(img:np.array):
         img = resize_image(img)
         img = Image.fromarray(img)
 
@@ -175,8 +187,28 @@ def store_non_card_images(img:np.array,img_label:str):
         # Get the byte data
         img_bytes = byte_io.getvalue()
 
-        fs.put(img_bytes, filename=img_label,Role='Other')
+        fs.put(img_bytes, filename='non card',Role='Other')
+        return None
+import time
+def store_non_card_all_images(images_array:np.array(np.array)):
+    for i in images_array:
+        store_non_card_single_image(i)
+        time.sleep(2)
         return None
 
+def Rand(start, end, num):
+    res = []
+    for j in range(num):
+        res.append(random.randint(start, end)) 
+    return res
 
-store_non_card_images(train_images[0], 'Frog')
+non_card_images_to_store_index = Rand(0,50000,3500)
+non_card_images_to_store = train_images[non_card_images_to_store_index]
+
+store_non_card_all_images(non_card_images_to_store)
+
+
+
+for i in non_card_images_to_store:
+    store_non_card_single_image(i)
+    #store_non_card_single_image(i)
