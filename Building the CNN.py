@@ -19,8 +19,9 @@ import gridfs
 from PIL import Image
 import io
 import random
-
-
+import torch
+from torch.utils.data import TensorDataset
+from torch.utils.data import DataLoader
 
 def resize_image(image_array:np.ndarray):
     """
@@ -51,8 +52,12 @@ fs = gridfs.GridFS(db)
 #Get all the ids of the items stored in mongodb
 images_id_mongodb = [i['_id'] for i in db.fs.files.find()]
 random.shuffle(images_id_mongodb) #Shuffle the dataset
+
 #get the byte object corresponding to each ID
 images_byte_mongodb = [fs.find_one({'_id':i}) for i in images_id_mongodb]
+
+# get the image labels 
+image_roles = [i.Role for i in images_byte_mongodb]
 #create a list containing the vector version of an image
 list_images_arrays=list()
 
@@ -74,9 +79,29 @@ for i in images_byte_mongodb:
         del images_byte_mongodb[index]
 
 
-Training_tensor = torch.Tensor(list_images_arrays)
+#Code the image_roles 
+hot_encoding = 0
+hot_encoding_dict = dict()
+for i in list(set(image_roles)):
+    hot_encoding_dict[i]=hot_encoding
+    hot_encoding+=1
+    
+image_roles_hot_encoding= [hot_encoding_dict[i] for i in image_roles]
 
 
+
+# Convert the data to tensors
+tensor_x =  torch.Tensor(list_images_arrays)
+tensor_y = torch.Tensor(image_roles_hot_encoding)
+#Create a data loader
+my_dataset = TensorDataset(tensor_x,tensor_y)
+dataloader = DataLoader(my_dataset, batch_size = 300, shuffle = True )
+
+dataloader
+
+
+x = [1,2,3]
+random.shuffle(x)
 
 
 import torch
@@ -123,24 +148,3 @@ for epoch in range(2):  # loop over the dataset multiple times
 print('Finished Training')
 
 
-
-
-transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                        download=True, transform=transform)
-
-trainset
-
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-                                          shuffle=True, num_workers=2)
-
-testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                       download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-                                         shuffle=False, num_workers=2)
-
-classes = ('plane', 'car', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
