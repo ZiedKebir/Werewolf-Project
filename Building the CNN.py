@@ -100,51 +100,39 @@ dataloader = DataLoader(my_dataset, batch_size = 300, shuffle = True )
 dataloader
 
 
-x = [1,2,3]
-random.shuffle(x)
-
-
-import torch
+"""
+Building the CNN
+"""
+# Building CNN
 import torch.nn as nn
-import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
-import torch.nn.functional as F
+import torch.nn.init as init
 
 class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+    def __init__(self,num_classes):
+        super().__init__()
+        self.features_extractor = nn.Sequential(
+            nn.Conv2d(3,32,kernel_size=3,padding=1),
+            nn.ELU(),
+            nn.Conv2d(32,64,kernel_size=3,padding=1),
+            nn.ELU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Flatten())
+        self.classifier = nn.Sequential(nn.Linear(64*112*112,num_classes),
+                                        nn.Softmax(dim=-1))
+    
+    def forward(self,x):
+        x = self.features_extractor(x)
+        x = self.classifier(x)
+        return x
+    
+net = Net(13)
 
-net = Net()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+test = tensor_x[[(tensor_y==i).nonzero().squeeze()[0].item() for i in range(0,13)]] #test include on image of each class
+test_y = tensor_y [[(tensor_y==i).nonzero().squeeze()[0].item() for i in range(0,13)]]
+test.size()
+test = test.permute(0,3,1,2) #Change the indexation of the tensor so that it is recognized by the class object Net [Size,Channels,nbr_rows,nbr_columns]
 
+f = net.forward(test)
 
-for epoch in range(2):  # loop over the dataset multiple times
-
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        inputs, labels = data
-
-        optimizer.zero_grad()
-
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-        if i % 2000 == 1999:  # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
-            running_loss = 0.0
-
-print('Finished Training')
 
 
