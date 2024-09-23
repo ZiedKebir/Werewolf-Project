@@ -92,12 +92,11 @@ image_roles_hot_encoding= [hot_encoding_dict[i] for i in image_roles]
 
 # Convert the data to tensors
 tensor_x =  torch.Tensor(list_images_arrays)
+tensor_x  = tensor_x.permute(0,3,1,2)
 tensor_y = torch.Tensor(image_roles_hot_encoding)
 #Create a data loader
 my_dataset = TensorDataset(tensor_x,tensor_y)
 dataloader = DataLoader(my_dataset, batch_size = 300, shuffle = True )
-
-dataloader
 
 
 """
@@ -106,6 +105,7 @@ Building the CNN
 # Building CNN
 import torch.nn as nn
 import torch.nn.init as init
+import torch.optim as optim
 
 class Net(nn.Module):
     def __init__(self,num_classes):
@@ -129,10 +129,28 @@ net = Net(13)
 
 test = tensor_x[[(tensor_y==i).nonzero().squeeze()[0].item() for i in range(0,13)]] #test include on image of each class
 test_y = tensor_y [[(tensor_y==i).nonzero().squeeze()[0].item() for i in range(0,13)]]
+test_y = test_y.long()
 test.size()
 test = test.permute(0,3,1,2) #Change the indexation of the tensor so that it is recognized by the class object Net [Size,Channels,nbr_rows,nbr_columns]
 
 f = net.forward(test)
 
 
+criterion = nn.CrossEntropyLoss() #used for a multiclassification problem
+optimizer = optim.Adam(net.parameters(),lr=0.001)
 
+for epoch in range(35):
+    for images , labels in dataloader:
+        optimizer.zero_grad()
+        output = net(images)
+        loss = criterion(output,labels)
+        loss.backward()
+        optimizer.step()
+    print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, 30, loss.item()))        
+            
+
+
+        
+loss
+
+net(test[i])
