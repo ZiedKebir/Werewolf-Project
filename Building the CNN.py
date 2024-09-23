@@ -94,6 +94,9 @@ image_roles_hot_encoding= [hot_encoding_dict[i] for i in image_roles]
 tensor_x =  torch.Tensor(list_images_arrays)
 tensor_x  = tensor_x.permute(0,3,1,2)
 tensor_y = torch.Tensor(image_roles_hot_encoding)
+tensor_y  = tensor_y.permute(0,3,1,2)
+tensor_y = tensor_y.long()
+
 #Create a data loader
 my_dataset = TensorDataset(tensor_x,tensor_y)
 dataloader = DataLoader(my_dataset, batch_size = 300, shuffle = True )
@@ -125,8 +128,7 @@ class Net(nn.Module):
         x = self.classifier(x)
         return x
     
-net = Net(13)
-
+"""
 test = tensor_x[[(tensor_y==i).nonzero().squeeze()[0].item() for i in range(0,13)]] #test include on image of each class
 test_y = tensor_y [[(tensor_y==i).nonzero().squeeze()[0].item() for i in range(0,13)]]
 test_y = test_y.long()
@@ -134,8 +136,10 @@ test.size()
 test = test.permute(0,3,1,2) #Change the indexation of the tensor so that it is recognized by the class object Net [Size,Channels,nbr_rows,nbr_columns]
 
 f = net.forward(test)
+"""
 
 
+net = Net(13)
 criterion = nn.CrossEntropyLoss() #used for a multiclassification problem
 optimizer = optim.Adam(net.parameters(),lr=0.001)
 
@@ -151,6 +155,3 @@ for epoch in range(35):
 
 
         
-loss
-
-net(test[i])
