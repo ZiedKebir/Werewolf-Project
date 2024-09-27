@@ -1,0 +1,2 @@
+### Werewolf Card Recognition using CNN
+This project focuses on training a Convolutional Neural Network (CNN) to recognize the different cards from the game Werewolf. The images used to train the model are stored in MongoDB, utilizing GridFS for efficient handling of the data. Data augmentation techniques are applied to expand the training dataset and improve the model's performance. The goal is to create a robust model that can accurately identify the role of each card in the game.
