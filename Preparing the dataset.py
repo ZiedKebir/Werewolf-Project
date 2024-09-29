@@ -2,14 +2,13 @@ import pymongo
 import os
 from PIL import Image
 import numpy as np
-import albumentations as A
-import cv2
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
 import gridfs
-from PIL import Image
+from PIL import Image, ImageFilter
 import io
 import random
+import albumentations as A
 
 os.chdir("C:/Users/ziedk/OneDrive/Bureau/Data Science Projects/Werewolf-Project")
 
@@ -212,3 +211,112 @@ store_non_card_all_images(non_card_images_to_store)
 for i in non_card_images_to_store:
     store_non_card_single_image(i)
     #store_non_card_single_image(i)
+
+"""
+Testing and validation dataset
+"""
+
+
+#### Card Images 
+
+#Load and store the card images and for each image perform some rotation and change in the saturation
+def store_image_and_modify(Image_Name:str):
+    Role_Name = Image_Name.split('.')[0]
+    #Open the image in read-only format.
+    with open('Images/'+Image_Name, 'rb') as f:
+        contents = f.read()
+
+    #Now store/put the image via GridFs object.
+    fs.put(contents, filename=Image_Name,Role=Role_Name)
+
+    for i in range(1,20):
+        augmented_image = data_rotation_saturation_modif(Image_Name)
+        
+        # Assuming img_array is your NumPy array (image data)
+        # Convert the NumPy array back to an image
+        img = Image.fromarray(augmented_image)
+
+        # Create a BytesIO buffer to store the image in bytes
+        byte_io = io.BytesIO()
+
+        # Save the image to the buffer in a specific format (e.g., JPEG, PNG)
+        img.save(byte_io, format='JPEG')
+
+        # Get the byte data
+        img_bytes = byte_io.getvalue()
+
+        fs.put(img_bytes, filename=Image_Name+str(i),Role=Role_Name)
+    return None
+
+
+def data_rotation_saturation_modif(image_name):
+    """
+    Parameters
+    ----------
+    image_name : str
+        Contains the name of the image as stored in the source folder. 
+        The name should also include the extension .jpg
+    Returns
+    -------
+    augmented_image : np.ndarray
+        Applies changes like rotaions, bluring... to the image in order to augment the size of 
+        our dataset
+
+    """    
+    image = Image.open('Images/'+image_name)
+    
+    #Rotate Image
+    rotation_angle = random.uniform(-180, 180)  # Random angle between -180 and 180 degrees
+    rotated_image = image.rotate(rotation_angle)    
+    # Apply blurring
+    blurred_rotated_image = rotated_image.filter(ImageFilter.GaussianBlur(radius=random.uniform(0,10)))  # Change radius for stronger blur
+    
+    #Convert the array to a Pil image type
+    image = PIL_to_array(blurred_rotated_image)
+    #Resize the image before transforming it
+    image = resize_image(image)
+    
+    #visualize(augmented_image)
+    return image
+    
+
+
+def store_all_images_and_modif():
+    for Image_Name in os.listdir("Images"):
+        print(Image_Name)
+        store_image_and_modify(Image_Name)
+        
+
+store_all_images_and_modif()
+
+
+### Stare non card images
+from datasets import load_dataset, Image
+
+dataset = load_dataset("beans", split="train")
+image = dataset[250]["image"]
+
+# Connect to MongoDB
+client = MongoClient('mongodb://localhost:27017/')
+db = client['Werewolf_Test_validation']
+fs = gridfs.GridFS(db)
+
+
+#Store first_batch_of_images: 
+dataset_1 = load_dataset("beans", split="train")
+(train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
+dataset_2 = test_images
+
+def test_validation_non_card_images():
+    for i in range(0,25):
+        array_image_1 = PIL_to_array(dataset[i]["image"])
+        resized_image_1 = resize_image(array_image_1)
+        resized_image_2 = resize_image(test_images[i])
+        # Store the images in mongodb- database Werewolf_Test_validation
+        store_non_card_all_images(resized_image_1)
+        store_non_card_all_images(resized_image_2)
+    return None
+
+
+test_validation_non_card_images()
+
