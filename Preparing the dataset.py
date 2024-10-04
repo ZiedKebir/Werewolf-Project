@@ -320,3 +320,12 @@ def test_validation_non_card_images():
 
 test_validation_non_card_images()
 
+
+array_image_1 = PIL_to_array(dataset[0]["image"])
+array_image_1.shape
+resized_image_1 = resize_image(array_image_1)
+resized_image_1.shape
+
+
+resized_image_2 = resize_image(test_images[0])
+resized_image_2.shape
