@@ -8,8 +8,9 @@ import gridfs
 from PIL import Image, ImageFilter
 import io
 import random
-import albumentations as A
-
+#import albumentations as A
+import tensorflow as tf
+import keras
 os.chdir("C:/Users/ziedk/OneDrive/Bureau/Data Science Projects/Werewolf-Project")
 
 # Connect to MongoDB
@@ -290,11 +291,14 @@ def store_all_images_and_modif():
 store_all_images_and_modif()
 
 
+
 ### Stare non card images
 from datasets import load_dataset, Image
 
 dataset = load_dataset("beans", split="train")
 image = dataset[250]["image"]
+
+
 
 # Connect to MongoDB
 client = MongoClient('mongodb://localhost:27017/')
@@ -306,6 +310,12 @@ fs = gridfs.GridFS(db)
 dataset_1 = load_dataset("beans", split="train")
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
 dataset_2 = test_images
+
+
+
+resize_image(test_images[0])
+
+test_images[0].shape
 
 def test_validation_non_card_images():
     for i in range(0,25):
@@ -329,3 +339,5 @@ resized_image_1.shape
 
 resized_image_2 = resize_image(test_images[0])
 resized_image_2.shape
+
+
