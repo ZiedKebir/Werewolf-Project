@@ -8,7 +8,7 @@ import gridfs
 from PIL import Image, ImageFilter
 import io
 import random
-#import albumentations as A
+import albumentations as A
 import tensorflow as tf
 import keras
 os.chdir("C:/Users/ziedk/OneDrive/Bureau/Data Science Projects/Werewolf-Project")
@@ -114,7 +114,7 @@ def store_image_and_augment(Image_Name:str):
     fs.put(contents, filename=Image_Name,Role=Role_Name)
 
     
-    for i in range(1,100):
+    for i in range(1,1000):
         augmented_image = data_augmentation(Image_Name)
         
         # Assuming img_array is your NumPy array (image data)
@@ -136,10 +136,14 @@ def store_image_and_augment(Image_Name:str):
 
 
 def store_all_images_and_modif():
+    count = 0
     for Image_Name in os.listdir("Images"):
-        print(Image_Name)
-        store_image_and_augment(Image_Name)
-
+        if count < 3: 
+            print(Image_Name)
+            store_image_and_augment(Image_Name)
+            count+=1
+        else:
+            break
 store_all_images_and_modif()
 
 #Get All the files stored in MongoDb
@@ -202,20 +206,17 @@ def Rand(start, end, num):
         res.append(random.randint(start, end)) 
     return res
 
-non_card_images_to_store_index = Rand(0,50000,3500)
+non_card_images_to_store_index = Rand(0,50000,300)
 non_card_images_to_store = train_images[non_card_images_to_store_index]
-
-store_non_card_all_images(non_card_images_to_store)
-
-
 
 for i in non_card_images_to_store:
     store_non_card_single_image(i)
-    #store_non_card_single_image(i)
 
+    
 """
 Testing and validation dataset
 """
+
 
 
 #### Card Images 
