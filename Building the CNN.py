@@ -53,6 +53,8 @@ client = MongoClient('mongodb://localhost:27017/')
 db = client['Werewolf']
 fs = gridfs.GridFS(db)
 
+
+
 #Get all the ids of the items stored in mongodb
 images_id_mongodb = [i['_id'] for i in db.fs.files.find()]
 random.shuffle(images_id_mongodb) #Shuffle the dataset
@@ -93,6 +95,8 @@ for i in list(set(image_roles)):
 image_roles_hot_encoding= [hot_encoding_dict[i] for i in image_roles]
 
 
+set(image_roles)
+
 # Convert the data to tensors
 tensor_x =  torch.Tensor(list_images_arrays)
 tensor_x  = tensor_x.permute(0,2,1,3) # #Change the indexation of the tensor so that it is recognized by the class object Net [Size,Channels,nbr_rows,nbr_columns]
@@ -102,8 +106,22 @@ tensor_y.size()
 tensor_y = tensor_y.long()
 #Create a data loader
 my_dataset = TensorDataset(tensor_x,tensor_y)
-dataloader = DataLoader(my_dataset, batch_size = 10, shuffle = True, pin_memory=True )
+dataloader = DataLoader(my_dataset, batch_size = 64, shuffle = True, pin_memory=True )
 
+
+"""my_dataset_red = TensorDataset(tensor_x[0:128],tensor_y[0:128])
+dataloader_red = DataLoader(my_dataset_red, batch_size=128)"""
+
+"""
+x = 236
+tensor_np = tensor_x[x].numpy()
+
+image = Image.fromarray((tensor_np).astype(np.uint8))  # Assuming tensor values are normalized
+image.show()
+
+tensor_y[x]
+image_roles[x]
+"""
 
 """
 Load the Testing/Validation dataset 
@@ -184,7 +202,7 @@ tensor_y_test.size()
 tensor_y_test = tensor_y_test.long()
 #Create a data loader
 my_dataset_test = TensorDataset(tensor_x_test,tensor_y_test)
-dataloader_Test = DataLoader(my_dataset_test, batch_size = 32, shuffle = True, pin_memory=True )
+dataloader_Test = DataLoader(my_dataset_test, batch_size = 64, shuffle = True, pin_memory=True )
 
 
 
@@ -196,6 +214,7 @@ tensor_y_test.size()
     
 
 
+
 """
 Building the CNN
 """
@@ -203,25 +222,32 @@ Building the CNN
 import torch.nn as nn
 import torch.nn.init as init
 import torch.optim as optim
+from tqdm import tqdm
 
 # Define the model class (same as your original code)
 class Net(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
         self.features_extractor = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.Conv2d(3, 64, kernel_size=3, padding=1, stride=2),
             nn.ELU(),
             nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1,stride=2),
             nn.ELU(),
             nn.MaxPool2d(2, 2),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1,stride=2),
             nn.ELU(),
-            nn.MaxPool2d(kernel_size=2),
+            nn.MaxPool2d(2, 2),
             nn.Flatten()
         )
         self.classifier = nn.Sequential(
-            nn.Linear(256*28*28, num_classes),
+            nn.Linear(2304, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, num_classes), 
             nn.Softmax(dim=-1)
         )
     
@@ -230,20 +256,44 @@ class Net(nn.Module):
         x = self.classifier(x)
         return x
 
+net = Net(4)
+
+
+first_batch = next(iter(dataloader))
+first_batch[0].shape
+first_batch = first_batch[0].permute(0,3,1,2)
+
+x = net.features_extractor(first_batch)
+x.size()
+
+net.classifier(x)
+
+
+
+
+
+
 # Check if CUDA is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-device = torch.device("cpu")
+#device = torch.device("cpu")
 
 print(f"Using device: {device}")
 
 # Instantiate the model and move it to the appropriate device (CPU or GPU)
-net = Net(13).to(device) #13 is the number of predictions in this case we have 13 classes
-#net = Net(13)
+#net = Net(13).to(device) #13 is the number of predictions in this case we have 13 classes
+net = Net(13)
+
 
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss()  # For multiclass classification
-optimizer = optim.Adam(net.parameters(), lr=0.001)
+optimizer = optim.Adam(net.parameters(), lr=0.000001)
+#optimizer=torch.optim.Adamax(net.parameters(), lr=0.00001)
+#optimizer = torch.optim.SGD(net.parameters(), lr=0.00001, momentum=0.9)
+#optimizer = torch.optim.RMSprop(net.parameters(), lr=0.0001)
+
+
+
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -256,28 +306,87 @@ def load_checkpoint(model, optimizer, file_path="model_checkpoint.pth"):
     return model, optimizer, epoch
 
 # Create a TensorBoard writer
-writer = SummaryWriter('runs/Large_CNN_3_Layers_Test_Val')
-num_epochs = 35
+# Line of code to launch Tensorboard ---> tensorboard --logdir=runs 
+writer = SummaryWriter('runs/run_2/Large_CNN_3_Layers_Test_Val')
+num_epochs = 25
 
 #net,optimizer,start_epoch = load_checkpoint(net,optimizer,file_path="model_checkpoint.pth")
 
+for epoch in range(num_epochs):
+    print(f"Epoch [{epoch + 1}/{num_epochs}]")
+    for batch_index, (data, targets) in enumerate(tqdm(dataloader)):
+        # Move data and targets to the device (GPU/CPU)
+        data  = data.permute(0, 3, 1, 2)
+        # Forward pass: compute the model output
+        scores = net(data)
+        loss = criterion(scores, targets)
 
-for epoch in range(0,num_epochs):
+        # Backward pass: compute the gradients
+        optimizer.zero_grad()
+        loss.backward()
+
+        # Optimization step: update the model parameters
+        optimizer.step()
+    
+
+
+def check_accuracy(loader, model):
+    """
+    Checks the accuracy of the model on the given dataset loader.
+
+    Parameters:
+        loader: DataLoader
+            The DataLoader for the dataset to check accuracy on.
+        model: nn.Module
+            The neural network model.
+    """
+    #if loader.dataset.train:
+    #    print("Checking accuracy on training data")
+    #else:
+    #    print("Checking accuracy on test data")
+
+    num_correct = 0
+    num_samples = 0
+    model.eval()  # Set the model to evaluation mode
+
+    with torch.no_grad():  # Disable gradient calculation
+        for x, y in loader:
+            x = x.permute(0, 3, 1, 2)
+            # Forward pass: compute the model output
+            scores = model(x)
+            _, predictions = scores.max(1)  # Get the index of the max log-probability
+            num_correct += (predictions == y).sum()  # Count correct predictions
+            num_samples += predictions.size(0)  # Count total samples
+
+        # Calculate accuracy
+        accuracy = float(num_correct) / float(num_samples) * 100
+        print(f"Got {num_correct}/{num_samples} with accuracy {accuracy:.2f}%")
+    
+    model.train()  # Set the model back to training mode
+
+# Final accuracy check on training and test sets
+check_accuracy(dataloader, net)
+
+
+
+
+"""
+for epoch in range(0, num_epochs):
     count_batches = 0 
     running_loss = 0.0
     correct = 0
     total = 0
 
-    for images, labels in dataloader:
-        images = images.permute(0,3,1,2)
-        #print(images.size())
+    # Set model to training mode
+    net.train()
 
-        images = images.to(device)
-        labels = labels.to(device)
-        #print("Label Size",labels.size())
+    for images, labels in dataloader_red:
+        images = images.permute(0, 3, 1, 2)  # Adjust shape if needed
+        #images = images.to(device)
+        #labels = labels.to(device)
+
         optimizer.zero_grad()
         output = net(images)
-        #print("Output Size",output.size())
         loss = criterion(output, labels)
         loss.backward()
         optimizer.step()
@@ -288,11 +397,11 @@ for epoch in range(0,num_epochs):
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
         count_batches += 1 
-    print(' Epoch ' + str(epoch) + " Completed")
+        print(f"Batch {count_batches}/376 completed")
+    
+    print(f'Epoch [{epoch+1}/{num_epochs}] Completed')
 
-
-
-    avg_loss = running_loss / len(dataloader)
+    avg_loss = running_loss / len(dataloader_red)
     accuracy = 100 * correct / total
 
     # Log metrics to TensorBoard
@@ -300,17 +409,17 @@ for epoch in range(0,num_epochs):
     writer.add_scalar('Accuracy/train', accuracy, epoch)
     print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}, Accuracy: {accuracy:.2f}%')
     
-        # Validation phase
+    # Validation phase
     net.eval()  # Set model to evaluation mode
     val_loss = 0.0
     correct_val = 0
     total_val = 0
 
     with torch.no_grad():  # No gradient calculation for validation
-        for val_images, val_labels in dataloader_Test:  # Assuming val_dataloader is your validation dataloader
-            val_images = val_images.permute(0,3,1,2) 
-            val_images = val_images.to(device)
-            val_labels = val_labels.to(device)
+        for val_images, val_labels in dataloader_Test:
+            val_images = val_images.permute(0, 3, 1, 2) 
+            #val_images = val_images.to(device)
+            #val_labels = val_labels.to(device)
 
             val_output = net(val_images)
             loss = criterion(val_output, val_labels)
@@ -329,9 +438,11 @@ for epoch in range(0,num_epochs):
     
     print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_loss:.4f}, Train Accuracy: {accuracy:.2f}%, Validation Loss: {avg_val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%')
 
-writer.close()  # Don't forget to close the writer
+# Close the TensorBoard writer
+writer.close()
+"""
 
-writer.close()  # Don't forget to close the writer
+
 
 
 torch.cuda.reset_peak_memory_stats()
