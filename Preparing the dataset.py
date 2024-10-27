@@ -138,12 +138,9 @@ def store_image_and_augment(Image_Name:str):
 def store_all_images_and_modif():
     count = 0
     for Image_Name in os.listdir("Images"):
-        if count < 3: 
-            print(Image_Name)
-            store_image_and_augment(Image_Name)
-            count+=1
-        else:
-            break
+        print(Image_Name)
+        store_image_and_augment(Image_Name)
+
 store_all_images_and_modif()
 
 #Get All the files stored in MongoDb
@@ -217,6 +214,10 @@ for i in non_card_images_to_store:
 Testing and validation dataset
 """
 
+# Connect to MongoDB
+client = MongoClient('mongodb://localhost:27017/')
+db = client['Werewolf_Test_validation']
+fs = gridfs.GridFS(db)
 
 
 #### Card Images 
@@ -231,7 +232,7 @@ def store_image_and_modify(Image_Name:str):
     #Now store/put the image via GridFs object.
     fs.put(contents, filename=Image_Name,Role=Role_Name)
 
-    for i in range(1,20):
+    for i in range(1,200):
         augmented_image = data_rotation_saturation_modif(Image_Name)
         
         # Assuming img_array is your NumPy array (image data)
@@ -298,8 +299,9 @@ from datasets import load_dataset, Image
 
 dataset = load_dataset("beans", split="train")
 image = dataset[250]["image"]
+PIL_to_array(image).shape
 
-
+image.show()
 
 # Connect to MongoDB
 client = MongoClient('mongodb://localhost:27017/')
@@ -309,23 +311,24 @@ fs = gridfs.GridFS(db)
 
 #Store first_batch_of_images: 
 dataset_1 = load_dataset("beans", split="train")
-(train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
-dataset_2 = test_images
+#(train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
+#dataset_2 = test_images
 
 
+image = Image.fromarray((resize_image(test_images[0])).astype(np.uint8))  # Assuming tensor values are normalized
+image.show()
 
-resize_image(test_images[0])
 
 test_images[0].shape
 
 def test_validation_non_card_images():
-    for i in range(0,25):
+    for i in range(0,150):
         array_image_1 = PIL_to_array(dataset[i]["image"])
         resized_image_1 = resize_image(array_image_1)
-        resized_image_2 = resize_image(test_images[i])
+        #resized_image_2 = resize_image(test_images[i])
         # Store the images in mongodb- database Werewolf_Test_validation
         store_non_card_all_images(resized_image_1)
-        store_non_card_all_images(resized_image_2)
+        #store_non_card_all_images(resized_image_2)
     return None
 
 
