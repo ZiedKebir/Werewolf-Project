@@ -345,3 +345,5 @@ resized_image_2 = resize_image(test_images[0])
 resized_image_2.shape
 
 
+
+
