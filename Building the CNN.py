@@ -106,7 +106,7 @@ tensor_y.size()
 tensor_y = tensor_y.long()
 #Create a data loader
 my_dataset = TensorDataset(tensor_x,tensor_y)
-dataloader = DataLoader(my_dataset, batch_size = 64, shuffle = True, pin_memory=True )
+dataloader = DataLoader(my_dataset, batch_size = 128, shuffle = True, pin_memory=True )
 
 
 """my_dataset_red = TensorDataset(tensor_x[0:128],tensor_y[0:128])
@@ -132,9 +132,9 @@ client = MongoClient('mongodb://localhost:27017/')
 db_test = client['Werewolf_Test_validation']
 fs = gridfs.GridFS(db_test)
 
+c = 0
 
-
-for i in db_test['fs_test.files'].find():
+for i in db_test['fs.files'].find():
     print(i['_id'])
 
 
@@ -152,22 +152,22 @@ image_roles = [i.Role for i in images_byte_mongodb]
 list_images_arrays=list()
 
 
+
+
+
+images_byte_mongodb[3].read()
+
 #Parses through byte images convert them to Pil images and then resizes them and changes them to array
 #The resulting arrays are stored in a list. If there is an error with an image it is deleted from the tensor that will be used to train the model
 index = 0
 count = 0
 for i in images_byte_mongodb:
     index+=1
-    try:
-        image = i.read()
-        Pil_Image = Image.open(io.BytesIO(image))
-        array = resize_image(np.array(Pil_Image))
-        list_images_arrays.append(array)
-    except:
-        count+=1
-        del images_id_mongodb[index]
-        del images_byte_mongodb[index]
-
+    image = i.read()
+    Pil_Image = Image.open(io.BytesIO(image))
+    print(Pil_Image)
+    array = resize_image(np.array(Pil_Image))
+    list_images_arrays.append(array)
 
 
 
@@ -181,20 +181,44 @@ for i in list(set(image_roles)):
 image_roles_hot_encoding= [hot_encoding_dict[i] for i in image_roles]
 
 
-image_roles[4]
 
-#Check that all the images have a size equal to (225,225,3)
+
+#Check that all the images have a size equal to (225,225,3) and change the images with 1 channel to a three channel image
 count = 0 
+corrected_list_images_array = list()
 for i in list_images_arrays:
     if i.shape != (225,225,3):
-        print(image_roles[count])
-    count+=1
+        image = Image.fromarray(i).convert("RGB")
+        corrected_list_images_array.append(PIL_to_array(image))
+    else:
+        corrected_list_images_array.append(i)
+        
+
+#check whether all the images in the corrected list have the right size
+count=0
+for i in corrected_list_images_array:
+    if i.shape != (225,225,3):
+        count+=1
+print(count)
+        
+
+
+
+
+
+
+
+"""
+# Show an image that is an array
+image = Image.fromarray((list_images_arrays[1]).astype(np.uint8))  # Assuming tensor values are normalized
+image.show()
+"""
 
 
 
 
 # Convert the data to tensors
-tensor_x_test =  torch.Tensor(list_images_arrays)
+tensor_x_test =  torch.Tensor(corrected_list_images_array)
 tensor_x_test  = tensor_x_test.permute(0,2,1,3) # #Change the indexation of the tensor so that it is recognized by the class object Net [Size,Channels,nbr_rows,nbr_columns]
 tensor_y_test = torch.Tensor(image_roles_hot_encoding)
 tensor_y_test.size()
@@ -206,10 +230,7 @@ dataloader_Test = DataLoader(my_dataset_test, batch_size = 64, shuffle = True, p
 
 
 
-
-
 tensor_x_test.size()
-
 tensor_y_test.size()
     
 
@@ -256,7 +277,7 @@ class Net(nn.Module):
         x = self.classifier(x)
         return x
 
-net = Net(4)
+net = Net(13)
 
 
 first_batch = next(iter(dataloader))
@@ -308,9 +329,49 @@ def load_checkpoint(model, optimizer, file_path="model_checkpoint.pth"):
 # Create a TensorBoard writer
 # Line of code to launch Tensorboard ---> tensorboard --logdir=runs 
 writer = SummaryWriter('runs/run_2/Large_CNN_3_Layers_Test_Val')
-num_epochs = 25
+num_epochs = 1
 
 #net,optimizer,start_epoch = load_checkpoint(net,optimizer,file_path="model_checkpoint.pth")
+
+
+
+
+
+def check_accuracy(loader, model):
+    """
+    Checks the accuracy of the model on the given dataset loader.
+
+    Parameters:
+        loader: DataLoader
+            The DataLoader for the dataset to check accuracy on.
+        model: nn.Module
+            The neural network model.
+    """
+    #if loader.dataset.train:
+    #    print("Checking accuracy on training data")
+    #else:
+    #    print("Checking accuracy on test data")
+
+    num_correct = 0
+    num_samples = 0
+    model.eval()  # Set the model to evaluation mode
+
+    with torch.no_grad():  # Disable gradient calculation
+        for x, y in loader:
+            x = x.permute(0, 3, 1, 2)
+            # Forward pass: compute the model output
+            scores = model(x)
+            _, predictions = scores.max(1)  # Get the index of the max log-probability
+            num_correct += (predictions == y).sum()  # Count correct predictions
+            num_samples += predictions.size(0)  # Count total samples
+
+        # Calculate accuracy
+        accuracy = float(num_correct) / float(num_samples) * 100
+        print(f"Got {num_correct}/{num_samples} with accuracy {accuracy:.2f}%")
+    
+    model.train()  # Set the model back to training mode
+
+
 
 for epoch in range(num_epochs):
     print(f"Epoch [{epoch + 1}/{num_epochs}]")
@@ -327,6 +388,35 @@ for epoch in range(num_epochs):
 
         # Optimization step: update the model parameters
         optimizer.step()
+    
+    print("Epoch[{}/{}] ,Train Accuracy: {:.1f}%", 
+          epoch+1,num_epochs,check_accuracy(dataloader, net))
+    
+    with torch.no_grad():
+        net.eval()
+        correct = 0
+        total = 0
+        all_val_loss = list()
+        for images, labels in dataloader_Test:
+            outputs = net(images)
+            total+=labels.size(0)
+            #calculated predictions
+            predicted = torch.argmax(outputs,dim=1)
+            print("print predicted values",predicted)
+            #calculated actual values
+            correct += (predicted == labels).sum().item()
+            #calculate the loss 
+            all_val_loss.append(criterion(outputs,labels).item())
+        #calculate val-loss
+        mean_val_loss = sum(all_val_loss)/len(all_val_loss)
+        #calculate val-accuracy 
+        mean_val_acc = 100 * (correct/total)
+    print(
+        'Epoch [{}/{}], Loss:{:.4f}, val-loss: {:.4f}, Val-acc: {:.1f}%',
+          epoch+1, num_epochs, loss.item(), mean_val_loss, mean_val_acc
+          )
+            
+            
     
 
 
